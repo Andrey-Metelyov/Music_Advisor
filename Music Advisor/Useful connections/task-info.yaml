@@ -41,30 +41,6 @@ files:
         }
     }
   learner_created: false
-- name: test/MockTokenServer.java
-  visible: false
-  text: |
-    import org.hyperskill.hstest.mocks.web.WebServerMock;
-
-    public class MockTokenServer extends Thread {
-
-        WebServerMock accessServer;
-
-        public MockTokenServer (WebServerMock accessServer) {
-            this.accessServer = accessServer;
-        }
-
-        @Override
-        public void run() {
-            accessServer.start();
-            accessServer.run();
-        }
-
-        public void stopMock() {
-            interrupt();
-        }
-    }
-  learner_created: false
 - name: test/MusicAdvisorTest.java
   visible: false
   text: |-
@@ -196,6 +172,23 @@ files:
 
     }
   learner_created: false
+- name: src/advisor/Release.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.util.List;
+
+    public class Release {
+        String name;
+        List<String> performers;
+
+        public Release(String name, List<String> performers) {
+            this.name = name;
+            this.performers = performers;
+        }
+    }
+  learner_created: true
 - name: test/Server.java
   visible: false
   text: |
@@ -300,6 +293,30 @@ files:
                 e.printStackTrace();
             }
 
+        }
+    }
+  learner_created: false
+- name: test/MockTokenServer.java
+  visible: false
+  text: |
+    import org.hyperskill.hstest.mocks.web.WebServerMock;
+
+    public class MockTokenServer extends Thread {
+
+        WebServerMock accessServer;
+
+        public MockTokenServer (WebServerMock accessServer) {
+            this.accessServer = accessServer;
+        }
+
+        @Override
+        public void run() {
+            accessServer.start();
+            accessServer.run();
+        }
+
+        public void stopMock() {
+            interrupt();
         }
     }
   learner_created: false

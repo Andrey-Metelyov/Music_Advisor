@@ -1,10 +1,21 @@
 package advisor;
 
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     static boolean isAuth = false;
+
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -33,9 +44,78 @@ public class Main {
     }
 
     private static void auth(String clientId) {
-        String uri = String.format("https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=http://localhost:8080&response_type=code",
-                clientId);
+        String redirectUri = "http://localhost:8080&response_type=code";
+        String uri = String.format("https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=%s",
+                clientId,
+                redirectUri);
+
+        class HttpServerThread extends Thread {
+            HttpServer server;
+            String code = "";
+
+            @Override
+            public void run() {
+                super.run();
+                System.err.println("Starting http server");
+                try {
+                    server = HttpServer.create();
+                    server.bind(new InetSocketAddress(8080), 0);
+                    server.createContext("/",
+                            exchange -> {
+                                String query = exchange.getRequestURI().getQuery();
+                                System.err.println("HttpServerThread: " + query);
+                                if (query == null) {
+                                    exchange.sendResponseHeaders(200, code.length());
+                                    exchange.getResponseBody().write(code.getBytes());
+                                    exchange.getResponseBody().close();
+                                } else if (query.startsWith("code=")) {
+                                    code = query.split("=")[1];
+                                    exchange.sendResponseHeaders(200, code.length());
+                                    exchange.getResponseBody().write(code.getBytes());
+                                    exchange.getResponseBody().close();
+                                }
+                            }
+                    );
+                    server.start();
+                } catch (IOException e) {
+                    e.printStackTrace(System.err);
+                }
+            }
+
+            @Override
+            public void interrupt() {
+                super.interrupt();
+                System.err.println("HttpServerThread: interrupt");
+                server.stop(1);
+            }
+        }
+        HttpServerThread httpServer = new HttpServerThread();
+        httpServer.start();
+
+        System.out.println("use this link to request the access code:");
         System.out.println(uri);
+
+        HttpClient client = HttpClient.newBuilder().build();
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create("http://localhost:8080"))
+                .GET()
+                .build();
+        HttpResponse<String> response = null;
+        try {
+            System.out.println("waiting for code...");
+            while (response == null || response.body().isEmpty()) {
+                response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                System.err.println("response.body() = '" + response.body() + "'");
+                Thread.sleep(1000);
+            }
+            String code = response.body();
+            System.err.printf("'%s'\n", code);
+            System.out.println("code received");
+            httpServer.interrupt();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
         isAuth = true;
         System.out.println("---SUCCESS---");
     }
