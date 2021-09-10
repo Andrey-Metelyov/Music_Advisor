@@ -128,6 +128,26 @@ files:
         }
     }
   learner_created: false
+- name: src/advisor/Release.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.util.List;
+
+    public class Release {
+        String name;
+        List<String> performers;
+
+        public Release(String name, List<String> performers) {
+            this.name = name;
+            this.performers = performers;
+        }
+    }
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/62/stages/336/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Fri, 10 Sep 2021 13:07:24 UTC
 record: -1

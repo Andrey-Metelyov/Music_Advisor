@@ -4,11 +4,15 @@ import java.util.List;
 import java.util.Scanner;
 
 public class Main {
+    static boolean isAuth = false;
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
         while (true) {
             String[] command = scanner.nextLine().split(" ");
             switch (command[0]) {
+                case "auth":
+                    auth("5c9c1eb78ad14532a4d238f4d579a8d3");
+                    break;
                 case "featured": // a list of Spotify-featured playlists with their links fetched from API;
                     featured();
                     break;
@@ -28,7 +32,19 @@ public class Main {
         }
     }
 
+    private static void auth(String clientId) {
+        String uri = String.format("https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=http://localhost:8080&response_type=code",
+                clientId);
+        System.out.println(uri);
+        isAuth = true;
+        System.out.println("---SUCCESS---");
+    }
+
     private static void playlist(String playlist) {
+        if (!isAuth) {
+            System.out.println("Please, provide access for application.");
+            return;
+        }
         List<String> list = List.of(
                 "Walk Like A Badass",
                 "Rage Beats",
@@ -40,6 +56,10 @@ public class Main {
     }
 
     private static void featured() {
+        if (!isAuth) {
+            System.out.println("Please, provide access for application.");
+            return;
+        }
         List<String> songs = List.of(
                 "Mellow Morning",
                 "Wake Up and Smell the Coffee",
@@ -51,6 +71,10 @@ public class Main {
     }
 
     private static void categories() {
+        if (!isAuth) {
+            System.out.println("Please, provide access for application.");
+            return;
+        }
         List<String> categories = List.of(
                 "Top Lists",
                 "Pop",
@@ -62,6 +86,10 @@ public class Main {
     }
 
     private static void newReleases() {
+        if (!isAuth) {
+            System.out.println("Please, provide access for application.");
+            return;
+        }
         List<Release> releases = List.of(
                 new Release("Mountains", List.of("Sia", "Diplo", "Labrinth")),
                 new Release("Runaway", List.of("Lil Peep")),
@@ -69,8 +97,6 @@ public class Main {
                 new Release("All Out Life", List.of("Slipknot"))
         );
         System.out.println("---NEW RELEASES---");
-        releases.forEach(release -> {
-            System.out.printf("%s %s\n", release.name, release.performers);
-        });
+        releases.forEach(release -> System.out.printf("%s %s\n", release.name, release.performers));
     }
 }
