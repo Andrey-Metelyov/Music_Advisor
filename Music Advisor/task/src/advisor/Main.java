@@ -1,7 +1,5 @@
 package advisor;
 
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
@@ -10,19 +8,31 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     static boolean isAuth = false;
+    static String code = "";
+    static String spotifyServer = "https://accounts.spotify.com";
 
     public static void main(String[] args) {
+        System.err.print("Arguments: ");
+        System.err.println(Arrays.toString(args));
+
+        if (args.length > 1) {
+            if (args[0].equals("-access")) {
+                spotifyServer = args[1];
+            }
+        }
+
         Scanner scanner = new Scanner(System.in);
         while (true) {
             String[] command = scanner.nextLine().split(" ");
             switch (command[0]) {
                 case "auth":
-                    auth("5c9c1eb78ad14532a4d238f4d579a8d3");
+                    auth("5c9c1eb78ad14532a4d238f4d579a8d3", "a4235f104ffb4e9ab9ce8ccb72cb80aa");
                     break;
                 case "featured": // a list of Spotify-featured playlists with their links fetched from API;
                     featured();
@@ -43,75 +53,83 @@ public class Main {
         }
     }
 
-    private static void auth(String clientId) {
-        String redirectUri = "http://localhost:8080&response_type=code";
-        String uri = String.format("https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=%s",
+    private static void auth(String clientId, String clientSecret) {
+        String redirectUri = "http://localhost:8080";
+        String responseType = "code";
+        String uri = String.format(
+                "https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=%s&response_type=%s",
                 clientId,
-                redirectUri);
+                redirectUri,
+                responseType);
 
-        class HttpServerThread extends Thread {
-            HttpServer server;
-            String code = "";
-
-            @Override
-            public void run() {
-                super.run();
-                System.err.println("Starting http server");
-                try {
-                    server = HttpServer.create();
-                    server.bind(new InetSocketAddress(8080), 0);
-                    server.createContext("/",
-                            exchange -> {
-                                String query = exchange.getRequestURI().getQuery();
-                                System.err.println("HttpServerThread: " + query);
-                                if (query == null) {
-                                    exchange.sendResponseHeaders(200, code.length());
-                                    exchange.getResponseBody().write(code.getBytes());
-                                    exchange.getResponseBody().close();
-                                } else if (query.startsWith("code=")) {
-                                    code = query.split("=")[1];
-                                    exchange.sendResponseHeaders(200, code.length());
-                                    exchange.getResponseBody().write(code.getBytes());
-                                    exchange.getResponseBody().close();
-                                }
+        HttpServer server;
+        final String[] httpServerResponse = {""};
+        try {
+            server = HttpServer.create();
+            server.bind(new InetSocketAddress(8080), 0);
+            server.createContext("/",
+                    exchange -> {
+                        String query = exchange.getRequestURI().getQuery();
+                        System.err.println("HttpServerThread: " + query);
+                        String answer;
+                        if (httpServerResponse[0].isEmpty()) {
+                            if (query == null || query.isEmpty() || query.startsWith("error=")) {
+                                answer = "Authorization code not found. Try again.";
+                            } else {
+                                answer = "Got the code. Return back to your program.";
+                                httpServerResponse[0] = query;
                             }
-                    );
-                    server.start();
-                } catch (IOException e) {
-                    e.printStackTrace(System.err);
-                }
-            }
-
-            @Override
-            public void interrupt() {
-                super.interrupt();
-                System.err.println("HttpServerThread: interrupt");
-                server.stop(1);
-            }
+                        } else {
+                            answer = httpServerResponse[0];
+                        }
+                        exchange.sendResponseHeaders(200, answer.length());
+                        exchange.getResponseBody().write(answer.getBytes());
+                        exchange.getResponseBody().close();
+                    }
+            );
+            server.start();
+        } catch (IOException e) {
+            e.printStackTrace(System.err);
+            return;
         }
-        HttpServerThread httpServer = new HttpServerThread();
-        httpServer.start();
 
         System.out.println("use this link to request the access code:");
         System.out.println(uri);
 
-        HttpClient client = HttpClient.newBuilder().build();
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create("http://localhost:8080"))
-                .GET()
-                .build();
-        HttpResponse<String> response = null;
         try {
+            HttpClient client = HttpClient.newBuilder().build();
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create("http://localhost:8080"))
+                    .GET()
+                    .build();
+            HttpResponse<String> response = null;
             System.out.println("waiting for code...");
-            while (response == null || response.body().isEmpty()) {
+            while (response == null || response.body().isEmpty() ||
+                    response.body().equals("Authorization code not found. Try again.")) {
                 response = client.send(request, HttpResponse.BodyHandlers.ofString());
-                System.err.println("response.body() = '" + response.body() + "'");
+                System.err.println("1. response.body() = '" + response.body() + "'");
                 Thread.sleep(1000);
             }
-            String code = response.body();
+            code = httpServerResponse[0].split("=")[1];
             System.err.printf("'%s'\n", code);
             System.out.println("code received");
-            httpServer.interrupt();
+            server.stop(1);
+
+            System.out.println("making http request for access_token...");
+            request = HttpRequest.newBuilder()
+                    .header("Content-Type", "application/x-www-form-urlencoded")
+                    .uri(URI.create(spotifyServer + "/api/token"))
+                    .POST(HttpRequest.BodyPublishers.ofString(
+                            String.format("client_id=%s&client_secret=%s&grant_type=authorization_code&code=%s&redirect_uri=%s",
+                                    clientId,
+                                    clientSecret,
+                                    code,
+                                    redirectUri)))
+                    .build();
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            System.err.println("2. response.body() = '" + response.body() + "'");
+            System.out.println("response:");
+            System.out.println(response.body());
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
