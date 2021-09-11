@@ -868,6 +868,23 @@ files:
         }
     }
   learner_created: false
+- name: src/advisor/Release.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.util.List;
+
+    public class Release {
+        String name;
+        List<String> performers;
+
+        public Release(String name, List<String> performers) {
+            this.name = name;
+            this.performers = performers;
+        }
+    }
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/62/stages/338/implement#comment
 status: Unchecked
 record: -1

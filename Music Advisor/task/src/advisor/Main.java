@@ -1,5 +1,6 @@
 package advisor;
 
+import com.google.gson.*;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
@@ -8,24 +9,27 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class Main {
     static boolean isAuth = false;
     static String code = "";
-    static String spotifyServer = "https://accounts.spotify.com";
+    static String accessToken = "";
+    static String spotifyAuthServer;
+    static String spotifyResourceServer;
+    static Map<String, String> config = new HashMap<>();
+    static HttpClient client = HttpClient.newBuilder().build();
 
     public static void main(String[] args) {
         System.err.print("Arguments: ");
         System.err.println(Arrays.toString(args));
 
-        if (args.length > 1) {
-            if (args[0].equals("-access")) {
-                spotifyServer = args[1];
-            }
+        for (int i = 0; i < args.length; i += 2) {
+            config.put(args[i], args[i + 1]);
         }
+
+        spotifyAuthServer = config.getOrDefault("-access", "https://accounts.spotify.com");
+        spotifyResourceServer = config.getOrDefault("-resource", "https://api.spotify.com");
 
         Scanner scanner = new Scanner(System.in);
         while (true) {
@@ -97,7 +101,6 @@ public class Main {
         System.out.println(uri);
 
         try {
-            HttpClient client = HttpClient.newBuilder().build();
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create("http://localhost:8080"))
                     .GET()
@@ -118,7 +121,7 @@ public class Main {
             System.out.println("making http request for access_token...");
             request = HttpRequest.newBuilder()
                     .header("Content-Type", "application/x-www-form-urlencoded")
-                    .uri(URI.create(spotifyServer + "/api/token"))
+                    .uri(URI.create(spotifyAuthServer + "/api/token"))
                     .POST(HttpRequest.BodyPublishers.ofString(
                             String.format("client_id=%s&client_secret=%s&grant_type=authorization_code&code=%s&redirect_uri=%s",
                                     clientId,
@@ -130,6 +133,8 @@ public class Main {
             System.err.println("2. response.body() = '" + response.body() + "'");
             System.out.println("response:");
             System.out.println(response.body());
+            JsonObject jo = JsonParser.parseString(response.body()).getAsJsonObject();
+            accessToken = jo.get("access_token").getAsString();
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
@@ -173,14 +178,34 @@ public class Main {
             System.out.println("Please, provide access for application.");
             return;
         }
-        List<String> categories = List.of(
-                "Top Lists",
-                "Pop",
-                "Mood",
-                "Latin"
-        );
-        System.out.println("---CATEGORIES---");
+        URI uri = URI.create(spotifyResourceServer + "/v1/browse/categories?limit=50");
+        List<String> categories = new ArrayList<>();
+        do {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .header("Authorization", "Bearer " + accessToken)
+                    .uri(uri)
+                    .GET()
+                    .build();
+            try {
+                HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+                System.err.println(response.body());
+                JsonObject jo = JsonParser.parseString(response.body()).getAsJsonObject();
+                JsonArray jsonCategories = jo.getAsJsonObject("categories").getAsJsonArray("items");
+                for (JsonElement category : jsonCategories) {
+                    categories.add(category.getAsJsonObject().get("name").getAsString());
+                }
+                JsonElement next = jo.getAsJsonObject("categories").get("next");
+                if (next.isJsonPrimitive()) {
+                    uri = URI.create(next.getAsString());
+                } else {
+                    break;
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+        } while (true);
         categories.forEach(System.out::println);
+//        System.out.println("---CATEGORIES---");
     }
 
     private static void newReleases() {
