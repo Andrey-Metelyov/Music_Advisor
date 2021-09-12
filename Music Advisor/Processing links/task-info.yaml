@@ -885,6 +885,18 @@ files:
         }
     }
   learner_created: true
+- name: src/advisor/Playlist.java
+  visible: true
+  learner_created: true
+- name: src/advisor/Song.java
+  visible: true
+  learner_created: true
+- name: src/advisor/Category.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/62/stages/338/implement#comment
-status: Unchecked
+status: Solved
+feedback:
+  message: Congratulations!
+  time: Sun, 12 Sep 2021 17:26:38 UTC
 record: -1
