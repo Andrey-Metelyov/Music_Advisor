@@ -851,6 +851,96 @@ files:
         }
     }
   learner_created: false
+- name: src/advisor/Release.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.net.URI;
+    import java.util.List;
+
+    public class Release {
+        String name;
+        List<String> performers;
+        URI href;
+
+        public Release(String name, List<String> performers, URI href) {
+            this.name = name;
+            this.performers = performers;
+            this.href = href;
+        }
+
+        @Override
+        public String toString() {
+            return name + System.lineSeparator() +
+                    performers + System.lineSeparator() +
+                    href + System.lineSeparator();
+        }
+    }
+  learner_created: true
+- name: src/advisor/Song.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.net.URI;
+
+    public class Song {
+        String name;
+        URI href;
+
+        public Song(String name, URI href) {
+            this.name = name;
+            this.href = href;
+        }
+
+        @Override
+        public String toString() {
+            return name + System.lineSeparator() +
+                    href + System.lineSeparator();
+        }
+    }
+  learner_created: true
+- name: src/advisor/Category.java
+  visible: true
+  text: |
+    package advisor;
+
+    public class Category {
+        String id;
+        String name;
+
+        public Category(String id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
+  learner_created: true
+- name: src/advisor/Playlist.java
+  visible: true
+  text: |
+    package advisor;
+
+    import java.net.URI;
+
+    public class Playlist {
+        String id;
+        String description;
+        URI href;
+
+        public Playlist(String id, String description, URI href) {
+            this.id = id;
+            this.description = description;
+            this.href = href;
+        }
+
+        @Override
+        public String toString() {
+            return description + System.lineSeparator() +
+                    href + System.lineSeparator();
+        }
+    }
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/62/stages/339/implement#comment
 status: Unchecked
 record: -1
