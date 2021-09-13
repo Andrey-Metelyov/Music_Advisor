@@ -941,6 +941,9 @@ files:
         }
     }
   learner_created: true
+- name: src/advisor/Auth.java
+  visible: true
+  learner_created: true
 feedback_link: https://hyperskill.org/projects/62/stages/339/implement#comment
 status: Unchecked
 record: -1

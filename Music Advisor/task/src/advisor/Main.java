@@ -1,10 +1,8 @@
 package advisor;
 
 import com.google.gson.*;
-import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -60,7 +58,22 @@ public class Main {
     }
 
     private static void auth(String clientId, String clientSecret) {
-        String redirectUri = "http://localhost:8080";
+        Auth auth = new Auth(spotifyAuthServer, clientId, clientSecret);
+        System.out.println("use this link to request the access code:");
+        System.out.println(auth.getAuthUri());
+        if (!auth.start()) {
+            return;
+        }
+        System.err.println("waiting auth");
+        while (!auth.isAuth()) {
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        accessToken = auth.getAccessToken();
+/*        String redirectUri = "http://localhost:8080";
         String responseType = "code";
         String uri = String.format(
                 "https://accounts.spotify.com/authorize?client_id=%s&redirect_uri=%s&response_type=%s",
@@ -74,23 +87,30 @@ public class Main {
             server = HttpServer.create();
             server.bind(new InetSocketAddress(8080), 0);
             server.createContext("/",
-                    exchange -> {
-                        String query = exchange.getRequestURI().getQuery();
-                        System.err.println("HttpServerThread: " + query);
-                        String answer;
-                        if (httpServerResponse[0].isEmpty()) {
-                            if (query == null || query.isEmpty() || query.startsWith("error=")) {
-                                answer = "Authorization code not found. Try again.";
+                    new HttpHandler() {
+                        @Override
+                        public void handle(HttpExchange exchange) throws IOException {
+                            String query = exchange.getRequestURI().getQuery();
+                            System.err.println("HttpServerThread: " + query);
+                            String answer;
+                            if (httpServerResponse[0].isEmpty()) {
+                                if (query == null || query.isEmpty() || query.startsWith("error=")) {
+                                    answer = "Authorization code not found. Try again.";
+                                } else {
+                                    answer = "Got the code. Return back to your program.";
+                                    httpServerResponse[0] = query;
+                                }
                             } else {
-                                answer = "Got the code. Return back to your program.";
-                                httpServerResponse[0] = query;
+                                answer = httpServerResponse[0];
                             }
-                        } else {
-                            answer = httpServerResponse[0];
+                            exchange.sendResponseHeaders(200, answer.length());
+                            exchange.getResponseBody().write(answer.getBytes());
+                            exchange.getResponseBody().close();
                         }
-                        exchange.sendResponseHeaders(200, answer.length());
-                        exchange.getResponseBody().write(answer.getBytes());
-                        exchange.getResponseBody().close();
+
+                        void requestToken(String code) {
+
+                        }
                     }
             );
             server.start();
@@ -140,7 +160,7 @@ public class Main {
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }
-
+*/
         isAuth = true;
         System.out.println("---SUCCESS---");
     }
